@@ -9,12 +9,8 @@ futures = "0.3"
 log = "0.4"
 oauth2 = "4.0.0-alpha"
 tiny_http = "0.6"
-# Until https://github.com/Emilgardis/twitch_api2/issues/62 is resolved, this
-# crate will only compile when it can locate a local version of twitch_api2
-# under `../twitch_api2`. This is in order to make it compatible with the other
-# repos who are currently importing twitch_api2 as git submodule since  they are
-# using unreleased code.
-twitch_oauth2 = { version = "0.5.0-alpha", features = ["surf_client"], path = "../twitch_api2/twitch_oauth2/" }
+twitch_api2 = { features = ["client", "helix", "surf_client", "twitch_oauth2"], git = "https://github.com/Emilgardis/twitch_api2/", branch = "master"  }
+twitch_oauth2 = { features = ["surf_client"], git = "https://github.com/Emilgardis/twitch_oauth2/", branch = "master"  }
 url = "2.2"
 
 [dev-dependencies]

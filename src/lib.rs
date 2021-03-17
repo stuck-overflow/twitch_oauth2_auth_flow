@@ -1,12 +1,19 @@
 use futures::executor::block_on;
 use log::{debug, error};
 use tiny_http::{Response, Server, StatusCode};
-use twitch_oauth2::{tokens::UserTokenBuilder, ClientId, ClientSecret, Scope, UserToken};
+use twitch_api2::twitch_oauth2::{
+    tokens::UserTokenBuilder, ClientId, ClientSecret, Scope, UserToken,
+};
 use url::Url;
 
 /// Twitch authentication flow.
 pub fn auth_flow(client_id: &str, client_secret: &str, scopes: Option<Vec<Scope>>) -> UserToken {
-    let mut hook = TwitchAuthHook::new(String::from(client_id), String::from(client_secret), scopes, 10666);
+    let mut hook = TwitchAuthHook::new(
+        String::from(client_id),
+        String::from(client_secret),
+        scopes,
+        10666,
+    );
     let (url, csrf) = hook.builder.generate_url();
     println!(
         "To obtain an authentication token, please visit\n{}",
@@ -32,7 +39,12 @@ struct TwitchAuthHook {
 }
 
 impl TwitchAuthHook {
-    fn new(client_id: String, client_secret: String, scopes: Option<Vec<Scope>>, port: i32) -> TwitchAuthHook {
+    fn new(
+        client_id: String,
+        client_secret: String,
+        scopes: Option<Vec<Scope>>,
+        port: i32,
+    ) -> TwitchAuthHook {
         let http_server = Server::http(format!("0.0.0.0:{}", port)).unwrap();
         let redirect_url = oauth2::RedirectUrl::new(format!(
             "http://localhost:{}",
