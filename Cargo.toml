@@ -7,12 +7,13 @@ edition = "2018"
 [dependencies]
 futures = "0.3"
 log = "0.4"
-oauth2 = "4.0.0-alpha"
 tiny_http = "0.6"
-twitch_api2 = { features = ["client", "helix", "surf_client", "twitch_oauth2"], git = "https://github.com/Emilgardis/twitch_api2/", branch = "master"  }
-twitch_oauth2 = { features = ["surf_client"], git = "https://github.com/Emilgardis/twitch_oauth2/", branch = "master"  }
+twitch_oauth2 = { features = ["surf_client"], version = "0.5.0-beta.1"  }
+surf = "2.2.0"
 url = "2.2"
+thiserror = "1"
 
 [dev-dependencies]
 surf = "2.2"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "test-util"] }
+dotenv = "0.15.0"
