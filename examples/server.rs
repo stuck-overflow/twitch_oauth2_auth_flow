@@ -5,7 +5,7 @@
 //!
 //! You'll need to add `http://localhost:10666/twitch/token` to your redirect URIs. (You can also override the url with the first argument passed to the executable)
 use std::env;
-use twitch_oauth2_auth_flow::auth_flow;
+use twitch_oauth2_auth_flow::auth_flow_surf;
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +16,7 @@ async fn main() {
         .nth(1)
         .unwrap_or_else(|| "http://localhost:10666/twitch/token".to_string());
     let scopes = None;
-    let res = auth_flow(&client_id, &client_secret, scopes, &redirect_url);
+    let res = auth_flow_surf(&client_id, &client_secret, scopes, &redirect_url);
     println!("got result: {:?}", res);
 }
 

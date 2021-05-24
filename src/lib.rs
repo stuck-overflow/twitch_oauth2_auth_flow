@@ -2,7 +2,6 @@ use futures::executor::block_on;
 use log::{debug, error};
 use tiny_http::{Response, Server, StatusCode};
 use twitch_oauth2::{
-    client::SurfError,
     tokens::{errors::UserTokenExchangeError, UserTokenBuilder},
     ClientId, ClientSecret, CsrfToken, Scope, UserToken,
 };
@@ -10,16 +9,22 @@ use url::Url;
 
 /// Errors for [`auth_flow`]
 #[derive(Debug, thiserror::Error)]
-pub enum AuthFlowError {
+pub enum AuthFlowError<ClientError>
+where
+    ClientError: std::error::Error + Send + Sync + 'static,
+{
     #[error(transparent)]
-    HookError(#[from] HookError),
+    HookError(#[from] HookError<ClientError>),
     #[error("could not parse url")]
     UrlParseError(#[from] url::ParseError),
 }
 
 /// Hook errors for [`TwitchAuthHook`]
 #[derive(Debug, thiserror::Error)]
-pub enum HookError {
+pub enum HookError<ClientError>
+where
+    ClientError: std::error::Error + Send + Sync + 'static,
+{
     #[error("when constructing http server")]
     TinyHttpError(#[source] Box<(dyn std::error::Error + Sync + Send + 'static)>),
     #[error("could not parse url")]
@@ -27,20 +32,48 @@ pub enum HookError {
     #[error("failed to do IO operation")]
     IoError(#[from] std::io::Error),
     #[error("talking with twitch authentication failed")]
-    ExchangeError(#[from] UserTokenExchangeError<SurfError>),
+    ExchangeError(#[from] UserTokenExchangeError<ClientError>),
+}
+
+/// Twitch authentication flow using surf
+///
+/// This token will only be valid for around 4 hours, but you can refresh the token with [`UserToken::refresh_token`](twitch_oauth2::TwitchToken::refresh_token)
+#[cfg(feature = "surf_client")]
+pub fn auth_flow_surf(
+    client_id: &str,
+    client_secret: &str,
+    scopes: Option<Vec<Scope>>,
+    redirect_url: &str,
+) -> Result<UserToken, AuthFlowError<twitch_oauth2::client::SurfError>> {
+    let redirect_url = Url::parse(&redirect_url)?;
+    let mut hook = TwitchAuthHook::new(
+        twitch_oauth2::client::surf_http_client,
+        String::from(client_id),
+        String::from(client_secret),
+        scopes,
+        redirect_url,
+    )?;
+    let (url, _) = hook.generate_url();
+    println!(
+        "To obtain an authentication token, please visit\n{}",
+        url.as_str().to_owned()
+    );
+    block_on(async { hook.receive_auth_token().await }).map_err(Into::into)
 }
 
 /// Twitch authentication flow.
 ///
 /// This token will only be valid for around 4 hours, but you can refresh the token with [`UserToken::refresh_token`](twitch_oauth2::TwitchToken::refresh_token)
-pub fn auth_flow(
+#[cfg(feature = "reqwest_client")]
+pub fn auth_flow_reqwest(
     client_id: &str,
     client_secret: &str,
     scopes: Option<Vec<Scope>>,
     redirect_url: &str,
-) -> Result<UserToken, AuthFlowError> {
+) -> Result<UserToken, AuthFlowError<twitch_oauth2::oauth2::reqwest::Error<reqwest::Error>>> {
     let redirect_url = Url::parse(&redirect_url)?;
     let mut hook = TwitchAuthHook::new(
+        twitch_oauth2::client::reqwest_http_client,
         String::from(client_id),
         String::from(client_secret),
         scopes,
@@ -83,20 +116,27 @@ pub fn auth_flow(
 /// # fn give_url_to_user(_: impl std::any::Any ) {}
 /// # Ok::<(), Box<std::error::Error + 'static>>(())
 /// ```
-pub struct TwitchAuthHook {
+pub struct TwitchAuthHook<C> {
     builder: UserTokenBuilder,
     redirect_url: Url,
     port: u16,
+    client: C,
 }
 
-impl TwitchAuthHook {
+impl<RE, C, F> TwitchAuthHook<C>
+where
+    RE: std::error::Error + Send + Sync + 'static,
+    C: Copy + FnOnce(twitch_oauth2::oauth2::HttpRequest) -> F,
+    F: std::future::Future<Output = Result<twitch_oauth2::oauth2::HttpResponse, RE>>,
+{
     /// Construct a new [`TwitchAuthHook`]
     pub fn new(
+        client: C,
         client_id: String,
         client_secret: String,
         scopes: impl Into<Option<Vec<Scope>>>,
         redirect_url: Url,
-    ) -> Result<TwitchAuthHook, HookError> {
+    ) -> Result<TwitchAuthHook<C>, HookError<RE>> {
         let redirect = twitch_oauth2::RedirectUrl::from_url(redirect_url.clone());
         let port = redirect.url().port_or_known_default().unwrap_or(80);
         let mut builder = UserToken::builder(
@@ -113,6 +153,7 @@ impl TwitchAuthHook {
             builder,
             redirect_url,
             port,
+            client,
         })
     }
 
@@ -131,7 +172,7 @@ impl TwitchAuthHook {
     /// Spin up a server to retrieve the token from the user.
     ///
     /// This token will only be valid for around 4 hours, but you can refresh the token with [`UserToken::refresh_token`](twitch_oauth2::TwitchToken::refresh_token)
-    pub async fn receive_auth_token(self) -> Result<UserToken, HookError> {
+    pub async fn receive_auth_token(self) -> Result<UserToken, HookError<RE>> {
         let http_server =
             Server::http(format!("0.0.0.0:{}", self.port)).map_err(HookError::TinyHttpError)?;
         let (code, state) = loop {
@@ -184,7 +225,7 @@ impl TwitchAuthHook {
             }
         };
         self.builder
-            .get_user_token(twitch_oauth2::client::surf_http_client, &state, &code)
+            .get_user_token(self.client, &state, &code)
             .await
             .map_err(Into::into)
     }
