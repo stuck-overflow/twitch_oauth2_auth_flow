@@ -3,17 +3,26 @@ name = "twitch_oauth2_auth_flow"
 version = "0.0.1-alpha"
 authors = ["stuckoverflow2021"]
 edition = "2018"
+resolver = "2"
 
 [dependencies]
 futures = "0.3"
 log = "0.4"
-tiny_http = "0.6"
-twitch_oauth2 = { features = ["surf_client"], version = "0.5.0-beta.1"  }
-surf = "2.2.0"
+tiny_http = "0.8"
+twitch_oauth2 = { version = "0.5.1"  }
+surf = {version = "2", optional = true }
+reqwest = {version = "0.11", optional = true}
 url = "2.2"
 thiserror = "1"
 
+[features]
+default = ["surf_client"]
+
+surf_client = ["surf", "twitch_oauth2/surf_client"]
+reqwest_client = ["reqwest", "twitch_oauth2/reqwest_client"]
+
 [dev-dependencies]
 surf = "2.2"
+twitch_oauth2 = { features = ["surf_client"], version = "0.5.1"  }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "test-util"] }
 dotenv = "0.15.0"
