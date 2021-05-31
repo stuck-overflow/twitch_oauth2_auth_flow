@@ -7,7 +7,7 @@ use twitch_oauth2::{
 };
 use url::Url;
 
-/// Errors for [`auth_flow`]
+/// Errors for [`auth_flow_surf`] and `auth_flow_reqwest`
 #[derive(Debug, thiserror::Error)]
 pub enum AuthFlowError<ClientError>
 where
@@ -91,7 +91,7 @@ pub fn auth_flow_reqwest(
 ///
 /// Spins up a small webserver that listens for a response from the user after they are redirected to the redirect URL by twitch.
 ///
-/// See [`auth_flow`] for a more integrated way of using this.
+/// See [`auth_flow_surf`] (or `auth_flow_reqwest`) for a more integrated way of using this.
 ///
 /// Make a new [`TwitchAuthHook`] and call [`generate_url()`](TwitchAuthHook::generate_url) and make the user navigate to the url.
 /// Retrieve the token with [`receive_auth_token`](TwitchAuthHook::receive_auth_token).
