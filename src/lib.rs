@@ -104,15 +104,16 @@ pub fn auth_flow_reqwest(
 /// use url::Url;
 ///
 /// let mut hook = TwitchAuthHook::new(
+///     twitch_oauth2::client::surf_http_client,  // or twitch_oauth2::client::reqwest_http_client
 ///     "my_client_id".to_string(),
 ///     "my_client_secret".to_string(),
-///     vec![Scope::ChatRead, Scope::ChatEdit, Scope::ChannelModerate, Scope::ModerationRead]
+///     vec![Scope::ChatRead, Scope::ChatEdit, Scope::ChannelModerate, Scope::ModerationRead],
 ///     Url::parse("http://localhost:8081/twitch/token")?,
 /// )?;
 ///
 /// let (url, _) = hook.generate_url();
 /// give_url_to_user(url);
-/// let token = hook.receive_auth_token()?;
+/// let token = hook.receive_auth_token();
 /// # fn give_url_to_user(_: impl std::any::Any ) {}
 /// # Ok::<(), Box<std::error::Error + 'static>>(())
 /// ```
