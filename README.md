@@ -1,4 +1,4 @@
-# Twitch Oauth2 Authentication Flow
+# Twitch Oauth2 Authentication Flow helper
 
 This crate helps managing Twitch [OAuth authorization code
 flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#oauth-authorization-code-flow)

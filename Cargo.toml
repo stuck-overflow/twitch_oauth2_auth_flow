@@ -9,6 +9,7 @@ license = "MIT"
 repository = "https://github.com/stuck-overflow/twitch_oauth2_auth_flow"
 resolver = "2"
 readme = "README.md"
+description = "Twitch Oauth2 Authentication Flow helper"
 
 [dependencies]
 futures = "0.3"
